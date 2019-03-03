@@ -9,13 +9,19 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
     private JMenuBar menuBar;
     private JMenu menu;
     private JMenuItem[] difficulties;
-    private JPanel panel;
+    private JPanel panel, smilePanel;
     private JToggleButton[][] togglers;
+    private JLabel timer, mineCount;
+    private JButton smiley;
     private ImageIcon mine, flag;
+    private ImageIcon[] numIcons;
 
     private int dimensionRow = 9;
     private int dimensionCol = 9;
     private int grid[][];
+    private int difficulty;
+
+    private int[] mineCounts = {10, 40, 99};
 
     public Minesweeper() {
         frame = new JFrame("Minesweeper");
@@ -44,14 +50,17 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
         togglers = new JToggleButton[dimensionRow][dimensionCol];
         grid = new int[dimensionRow][dimensionCol];
         panel = new JPanel();
-        panel.setLayout(new GridLayout(dimensionRow, dimensionCol));
-        for (int r = 0; r < togglers.length; r++) {
-            for (int c = 0; c < togglers[r].length; c++) {
-                togglers[r][c] = new JToggleButton();
-                togglers[r][c].addMouseListener(this);
-                panel.add(togglers[r][c]);
-            }
-        }
+
+        smilePanel = new JPanel();
+        smilePanel.setLayout(new GridLayout(1, 3));
+        timer = new JLabel("000");
+        smiley = new JButton();
+        mineCount = new JLabel(""+mineCounts[difficulty]);
+        smilePanel.add(mineCount);
+        smilePanel.add(smiley);
+
+        createMap();
+        frame.add(smilePanel, BorderLayout.NORTH);
         frame.add(panel, BorderLayout.CENTER);
 
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -101,10 +110,10 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
                     if (e.getSource() == button) {
                         if (!(button.getIcon()==flag)) {
                             button.setSelected(true);
-                            System.out.println("NotFlagSelected");
+                            button.setIcon(numIcons[0]);
+                            button.setEnabled(false);
                         } else {
                             button.setSelected(false);
-                            System.out.println("Flag Deselect");
                         }
                     }
                 }
@@ -115,18 +124,21 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
 
     public void actionPerformed(ActionEvent e) {
         if(e.getSource() == difficulties[0]){
+            difficulty = 0;
             frame.setSize(1000,800);
             dimensionRow = 9;
             dimensionCol = 9;
             createMap();
         }
         if(e.getSource() == difficulties[1]){
+            difficulty = 1;
             frame.setSize(1000,800);
             dimensionRow = 16;
             dimensionCol = 16;
             createMap();
         }
         if(e.getSource() == difficulties[2]){
+            difficulty = 2;
             frame.setSize(1875,800);
             dimensionRow = 16;
             dimensionCol = 30;
@@ -135,7 +147,6 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
     }
 
     public void createMap(){
-        System.out.println("Create Map");
         togglers = new JToggleButton[dimensionRow][dimensionCol];
         grid = new int[dimensionRow][dimensionCol];
         panel.removeAll();
@@ -159,6 +170,12 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
         flag = new ImageIcon("flag.png");
         flag = new ImageIcon(flag.getImage().getScaledInstance(frame.getWidth() / dimensionCol,
                 frame.getHeight() / dimensionRow, Image.SCALE_SMOOTH));
+        numIcons = new ImageIcon[9];
+        for(int i=0; i<9; i++){
+            numIcons[i] = new ImageIcon(i+".png");
+            numIcons[i] = new ImageIcon(numIcons[i].getImage().getScaledInstance(frame.getWidth() / dimensionCol,
+                frame.getHeight() / dimensionRow, Image.SCALE_SMOOTH));
+        }
     }
 
     public static void main(String[] args) {

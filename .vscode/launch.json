@@ -1,21 +1,11 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-    "version": "0.2.0",
     "configurations": [
         {
             "type": "java",
             "name": "CodeLens (Launch) - Minesweeper",
             "request": "launch",
             "mainClass": "Minesweeper",
-            "projectName": "Minesweeper_2bd4e33e"
-        },
-        {
-            "type": "java",
-            "name": "Debug (Launch) - Current File",
-            "request": "launch",
-            "mainClass": "${file}"
+            "projectName": "Minesweeper_c4ec2216"
         }
     ]
 }
