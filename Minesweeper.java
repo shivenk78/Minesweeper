@@ -19,6 +19,7 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
     private int dimensionRow = 9;
     private int dimensionCol = 9;
     private int grid[][];
+    private boolean clicked[][];
     private int difficulty;
 
     private int[] mineCounts = {10, 40, 99};
@@ -49,15 +50,17 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
 
         togglers = new JToggleButton[dimensionRow][dimensionCol];
         grid = new int[dimensionRow][dimensionCol];
+        clicked = new boolean[dimensionRow][dimensionCol];
         panel = new JPanel();
 
         smilePanel = new JPanel();
         smilePanel.setLayout(new GridLayout(1, 3));
         timer = new JLabel("000");
         smiley = new JButton();
-        mineCount = new JLabel(""+mineCounts[difficulty]);
+        mineCount = new JLabel(String.format("%03d",mineCounts[difficulty]));
         smilePanel.add(mineCount);
         smilePanel.add(smiley);
+        smilePanel.add(timer);
 
         createMap();
         frame.add(smilePanel, BorderLayout.NORTH);
@@ -67,10 +70,31 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
         frame.setVisible(true);
     }
 
-    public void click(int row, int col){
+    public void clickExpand(int row, int col){
         int val = grid[row][col];
+        clicked[row][col] = true;
         if(val == 0){
-            
+            int startR = (row > 0) ? row-1 : row;
+            int endR = (row < grid.length-1) ? row+1 : row;
+            int startC = (col > 0) ? col-1 : col;
+            int endC = (col < grid[row].length-1) ? col+1 : col;
+
+            for(int r = startR; r<=endR; r++){
+                for(int c = startC; c<=endC; c++){
+                    if(grid[r][c] == 0){
+                        if(!clicked[r][c])
+                            clickExpand(r,c);
+                        
+                        if (!(togglers[r][c].getIcon()==flag)) {
+                            
+                            togglers[r][c].setSelected(true);
+                            togglers[r][c].setIcon(numIcons[0]);
+                            togglers[r][c].setEnabled(false);
+                            togglers[r][c].removeActionListener(this);
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -105,16 +129,10 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
             }
         }
         if (e.getButton() == MouseEvent.BUTTON1) { // Left Click
-            for (JToggleButton[] tRow : togglers) {
-                for (JToggleButton button : tRow) {
-                    if (e.getSource() == button) {
-                        if (!(button.getIcon()==flag)) {
-                            button.setSelected(true);
-                            button.setIcon(numIcons[0]);
-                            button.setEnabled(false);
-                        } else {
-                            button.setSelected(false);
-                        }
+            for (int r=0; r<togglers.length; r++) {
+                for (int c=0; c<togglers[r].length; c++) {
+                    if (e.getSource() == togglers[r][c] && !clicked[r][c]) {
+                        clickExpand(r, c);
                     }
                 }
             }
@@ -149,8 +167,9 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
     public void createMap(){
         togglers = new JToggleButton[dimensionRow][dimensionCol];
         grid = new int[dimensionRow][dimensionCol];
-        panel.removeAll();
-        panel.updateUI();
+        clicked = new boolean[dimensionRow][dimensionCol];
+        frame.remove(panel);
+        panel=new JPanel();
         panel.setLayout(new GridLayout(dimensionRow, dimensionCol));
         for (int r = 0; r < togglers.length; r++) {
             for (int c = 0; c < togglers[r].length; c++) {
@@ -159,8 +178,10 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
                 panel.add(togglers[r][c]);
             }
         }
-        frame.revalidate();
         resizeImages();
+        frame.add(panel,BorderLayout.CENTER);
+        frame.revalidate();
+        
     }
 
     public void resizeImages(){

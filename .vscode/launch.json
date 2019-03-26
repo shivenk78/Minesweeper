@@ -4,8 +4,7 @@
             "type": "java",
             "name": "CodeLens (Launch) - Minesweeper",
             "request": "launch",
-            "mainClass": "Minesweeper",
-            "projectName": "Minesweeper_c4ec2216"
+            "mainClass": "Minesweeper"
         }
     ]
 }
