@@ -13,16 +13,19 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
     private JToggleButton[][] togglers;
     private JLabel timer, mineCount;
     private JButton smiley;
-    private ImageIcon mine, flag;
+    private ImageIcon empty, mine, flag;
     private ImageIcon[] numIcons;
 
     private int dimensionRow = 9;
     private int dimensionCol = 9;
     private int grid[][];
     private boolean clicked[][];
+    private boolean firstClick;
     private int difficulty;
 
     private int[] mineCounts = {10, 40, 99};
+
+    //TODO: allow clicking of flags, prevent reverting with right click, win conditions, timer, counter 
 
     public Minesweeper() {
         frame = new JFrame("Minesweeper");
@@ -63,17 +66,53 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
         smilePanel.add(timer);
 
         createMap();
-        frame.add(smilePanel, BorderLayout.NORTH);
+        frame.add(smilePanel, BorderLayout.CENTER);
         frame.add(panel, BorderLayout.CENTER);
 
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
     }
 
+    public void randomizeBoard(){
+        firstClick = true;
+
+        for(int i=0; i<mineCounts[difficulty]; i++){
+            int randRow, randCol;
+            do{
+                randRow = randBetween(0, grid.length);
+                randCol = randBetween(0, grid[0].length);
+            }while(grid[randRow][randCol] != 0);
+            grid[randRow][randCol] = -1;
+        }
+
+        for(int row = 0; row<grid.length; row++){
+            for(int col = 0; col<grid[row].length; col++){
+                if(grid[row][col] >= 0){
+                    int startR = (row > 0) ? row-1 : row;
+                    int endR = (row < grid.length-1) ? row+1 : row;
+                    int startC = (col > 0) ? col-1 : col;
+                    int endC = (col < grid[row].length-1) ? col+1 : col;
+                    int mines = 0;
+
+                    for(int r = startR; r<=endR; r++){
+                        for(int c = startC; c<=endC; c++){
+                            if(grid[r][c] == -1)
+                                mines++;
+                        }
+                    }
+                    grid[row][col] = mines;
+                }
+            }
+        }
+        printGrid(grid);
+    }
+
     public void clickExpand(int row, int col){
+        if(!firstClick)
+            randomizeBoard();
         int val = grid[row][col];
         clicked[row][col] = true;
-        if(val == 0){
+        if(val >= 0){
             int startR = (row > 0) ? row-1 : row;
             int endR = (row < grid.length-1) ? row+1 : row;
             int startC = (col > 0) ? col-1 : col;
@@ -81,15 +120,12 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
 
             for(int r = startR; r<=endR; r++){
                 for(int c = startC; c<=endC; c++){
-                    if(grid[r][c] == 0){
-                        if(!clicked[r][c])
+                    if(grid[r][c] >= 0){
+                        if(grid[r][c] == 0 && !clicked[r][c])
                             clickExpand(r,c);
-                        
                         if (!(togglers[r][c].getIcon()==flag)) {
-                            
                             togglers[r][c].setSelected(true);
-                            togglers[r][c].setIcon(numIcons[0]);
-                            togglers[r][c].setEnabled(false);
+                            togglers[r][c].setIcon(numIcons[grid[r][c]]); 
                             togglers[r][c].removeActionListener(this);
                         }
                     }
@@ -122,7 +158,7 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
                         if (!button.isSelected()) {
                             button.setIcon(flag);
                         } else {
-                            button.setIcon(null);
+                            button.setIcon(empty);
                         }
                     }
                 }
@@ -131,7 +167,7 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
         if (e.getButton() == MouseEvent.BUTTON1) { // Left Click
             for (int r=0; r<togglers.length; r++) {
                 for (int c=0; c<togglers[r].length; c++) {
-                    if (e.getSource() == togglers[r][c] && !clicked[r][c]) {
+                    if (e.getSource() == togglers[r][c] && (!clicked[r][c] && togglers[r][c].getIcon() == empty)) {
                         clickExpand(r, c);
                     }
                 }
@@ -168,23 +204,28 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
         togglers = new JToggleButton[dimensionRow][dimensionCol];
         grid = new int[dimensionRow][dimensionCol];
         clicked = new boolean[dimensionRow][dimensionCol];
+        firstClick = false;
         frame.remove(panel);
         panel=new JPanel();
+        resizeImages();
         panel.setLayout(new GridLayout(dimensionRow, dimensionCol));
         for (int r = 0; r < togglers.length; r++) {
             for (int c = 0; c < togglers[r].length; c++) {
                 togglers[r][c] = new JToggleButton();
                 togglers[r][c].addMouseListener(this);
+                togglers[r][c].setIcon(empty);
                 panel.add(togglers[r][c]);
             }
         }
-        resizeImages();
         frame.add(panel,BorderLayout.CENTER);
         frame.revalidate();
         
     }
 
     public void resizeImages(){
+        empty = new ImageIcon("empty.png");
+        empty = new ImageIcon(empty.getImage().getScaledInstance(frame.getWidth() / dimensionCol,
+                frame.getHeight() / dimensionRow, Image.SCALE_SMOOTH));
         mine = new ImageIcon("mine.png");
         mine = new ImageIcon(mine.getImage().getScaledInstance(frame.getWidth() / dimensionCol,
                 frame.getHeight() / dimensionRow, Image.SCALE_SMOOTH));
@@ -197,6 +238,19 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
             numIcons[i] = new ImageIcon(numIcons[i].getImage().getScaledInstance(frame.getWidth() / dimensionCol,
                 frame.getHeight() / dimensionRow, Image.SCALE_SMOOTH));
         }
+    }
+
+    //General Utilities
+    public int randBetween(int a, int b){
+        return (int)(Math.random()*(b-a)) + a;
+    }
+
+    public void printGrid(int[][] gr){
+        for(int[] row : gr){
+            for(int i : row)
+                System.out.print(i+" ");
+            System.out.println();
+        }     
     }
 
     public static void main(String[] args) {
