@@ -21,6 +21,7 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
     private int grid[][];
     private boolean clicked[][];
     private boolean firstClick;
+    private boolean gameOver;
     private int difficulty;
 
     private int[] mineCounts = {10, 40, 99};
@@ -64,6 +65,8 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
         smilePanel.add(mineCount);
         smilePanel.add(smiley);
         smilePanel.add(timer);
+        menu.add(smilePanel);
+        
 
         createMap();
         frame.add(smilePanel, BorderLayout.CENTER);
@@ -73,7 +76,7 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
         frame.setVisible(true);
     }
 
-    public void randomizeBoard(){
+    public void randomizeBoard(int firstClickRow, int firstClickCol){
         firstClick = true;
 
         for(int i=0; i<mineCounts[difficulty]; i++){
@@ -81,7 +84,7 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
             do{
                 randRow = randBetween(0, grid.length);
                 randCol = randBetween(0, grid[0].length);
-            }while(grid[randRow][randCol] != 0);
+            }while(grid[randRow][randCol] != 0 && (randRow !=firstClickRow && randCol!=firstClickCol));
             grid[randRow][randCol] = -1;
         }
 
@@ -109,7 +112,7 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
 
     public void clickExpand(int row, int col){
         if(!firstClick)
-            randomizeBoard();
+            randomizeBoard(row, col);
         int val = grid[row][col];
         clicked[row][col] = true;
         if(val >= 0){
@@ -121,15 +124,34 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
             for(int r = startR; r<=endR; r++){
                 for(int c = startC; c<=endC; c++){
                     if(grid[r][c] >= 0){
-                        if(grid[r][c] == 0 && !clicked[r][c])
+                        if(grid[r][c] == 0 && !clicked[r][c]) 
                             clickExpand(r,c);
-                        if (!(togglers[r][c].getIcon()==flag)) {
-                            togglers[r][c].setSelected(true);
-                            togglers[r][c].setIcon(numIcons[grid[r][c]]); 
-                            togglers[r][c].removeActionListener(this);
-                        }
+                        clickSpace(r, c);
                     }
                 }
+            }
+        }
+    }
+
+    public void clickSpace(int r, int c){
+        if(!firstClick)
+            randomizeBoard(r, c);
+        if (!(togglers[r][c].getIcon()==flag)) {
+            togglers[r][c].setSelected(true);
+            togglers[r][c].setIcon(numIcons[grid[r][c]]); 
+            togglers[r][c].removeActionListener(this);
+        }
+    }
+
+    public void exposeMines(){
+        gameOver = true;
+        for(int r=0; r<grid.length; r++){
+            for(int c=0; c<grid[r].length; c++){
+                if(grid[r][c] == -1){
+                    togglers[r][c].setSelected(true);
+                    togglers[r][c].setIcon(mine); 
+                }
+                togglers[r][c].removeActionListener(this);
             }
         }
     }
@@ -151,24 +173,33 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
     }
 
     public void mouseReleased(MouseEvent e) {
-        if (e.getButton() == MouseEvent.BUTTON3) { // Right Click
-            for (JToggleButton[] tRow : togglers) {
-                for (JToggleButton button : tRow) {
-                    if (e.getSource() == button) {
-                        if (!button.isSelected()) {
-                            button.setIcon(flag);
-                        } else {
-                            button.setIcon(empty);
+        if(!gameOver){
+            if (e.getButton() == MouseEvent.BUTTON3) { // Right Click
+                for (JToggleButton[] tRow : togglers) {
+                    for (JToggleButton button : tRow) {
+                        if (e.getSource() == button) {
+                            if (!button.isSelected()) {
+                                button.setIcon(flag);
+                            } else {
+                                button.setIcon(empty);
+                            }
                         }
                     }
                 }
             }
-        }
-        if (e.getButton() == MouseEvent.BUTTON1) { // Left Click
-            for (int r=0; r<togglers.length; r++) {
-                for (int c=0; c<togglers[r].length; c++) {
-                    if (e.getSource() == togglers[r][c] && (!clicked[r][c] && togglers[r][c].getIcon() == empty)) {
-                        clickExpand(r, c);
+            if (e.getButton() == MouseEvent.BUTTON1) { // Left Click
+                for (int r=0; r<togglers.length; r++) {
+                    for (int c=0; c<togglers[r].length; c++) {
+                        if (e.getSource() == togglers[r][c] && (!clicked[r][c] && togglers[r][c].getIcon() == empty)) {
+                            if(grid[r][c] == 0){
+                                clickExpand(r, c);
+                            }else if(grid[r][c]>0){
+                                clickSpace(r,c);
+                            }else{
+                                exposeMines();
+                            }
+
+                        }
                     }
                 }
             }
@@ -205,6 +236,7 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
         grid = new int[dimensionRow][dimensionCol];
         clicked = new boolean[dimensionRow][dimensionCol];
         firstClick = false;
+        gameOver = false;
         frame.remove(panel);
         panel=new JPanel();
         resizeImages();
