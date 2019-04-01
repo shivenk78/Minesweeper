@@ -1,6 +1,8 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class Minesweeper extends JPanel implements ActionListener, MouseListener {
 
@@ -11,10 +13,11 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
     private JMenuItem[] difficulties;
     private JPanel panel, smilePanel, topPanel;
     private JToggleButton[][] togglers;
-    private JLabel timer, mineCount;
+    private JLabel timerLabel, mineCount;
     private JButton smiley;
-    private ImageIcon empty, mine, flag;
+    private ImageIcon empty, mine, flag, smileyWin, smileyLose, smileyClick, smileyReg;
     private ImageIcon[] numIcons;
+    private Timer timer;
 
     private int dimensionRow = 9;
     private int dimensionCol = 9;
@@ -23,13 +26,16 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
     private boolean firstClick;
     private boolean gameOver;
     private int difficulty;
+    private int timePassed = 0;
+    private int flagCount;
 
     private int[] mineCounts = {10, 40, 99};
 
-    //TODO: win conditions, timer, counter, icons, ensure start at 0
+    //TODO: counter, icons, ensure start at 0
 
     public Minesweeper() {
         frame = new JFrame("Minesweeper");
+        timer = new Timer();
         frame.add(this);
         frame.setSize(1000, 800);
         resizeImages();
@@ -59,12 +65,11 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
 
         smilePanel = new JPanel();
         smilePanel.setLayout(new FlowLayout());
-        timer = new JLabel("000");
-        smiley = new JButton();
+        timerLabel = new JLabel("000");
         mineCount = new JLabel(String.format("%03d",mineCounts[difficulty]));
         smilePanel.add(mineCount);
         smilePanel.add(smiley);
-        smilePanel.add(timer);
+        smilePanel.add(timerLabel);
         menu.add(smilePanel);
         
 
@@ -81,15 +86,17 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
 
     public void randomizeBoard(int firstClickRow, int firstClickCol){
         firstClick = true;
+        timer.schedule(new UpdateTimer(), 0, 1000);
 
         for(int i=0; i<mineCounts[difficulty]; i++){
-            int randRow, randCol;
-            do{
+            int randRow = randBetween(0, grid.length);
+            int randCol = randBetween(0, grid[0].length);
+            while(grid[randRow][randCol] != 0 && (Math.abs(randRow-firstClickRow)<=1 && (randCol-firstClickCol)<=1)){
                 randRow = randBetween(0, grid.length);
                 randCol = randBetween(0, grid[0].length);
-            }while(grid[randRow][randCol] != 0 && (randRow !=firstClickRow && randCol!=firstClickCol));
+            }
             grid[randRow][randCol] = -1;
-        }
+        }        
 
         for(int row = 0; row<grid.length; row++){
             for(int col = 0; col<grid[row].length; col++){
@@ -157,6 +164,33 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
                 togglers[r][c].removeActionListener(this);
             }
         }
+        smiley.setIcon(smileyLose);
+    }
+
+    public void flagMines(){
+        gameOver = true;
+        for(int r=0; r<grid.length; r++){
+            for(int c=0; c<grid[r].length; c++){
+                if(grid[r][c] == -1){
+                    togglers[r][c].setSelected(true);
+                    togglers[r][c].setIcon(flag); 
+                }
+                togglers[r][c].removeActionListener(this);
+            }
+        }
+        smiley.setIcon(smileyWin);
+    }
+
+    public boolean isGameWon(){
+        int spaceCount = 0;
+        for(int r=0; r<grid.length; r++){
+            for(int c=0; c<grid[r].length; c++){
+                if(!togglers[r][c].isSelected())
+                    spaceCount++;
+            }
+        }
+
+        return spaceCount == mineCounts[difficulty];
     }
 
     public void mouseClicked(MouseEvent e) {
@@ -168,7 +202,15 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
     }
 
     public void mousePressed(MouseEvent e) {
-    
+        if (e.getButton() == MouseEvent.BUTTON1) { // Left Click
+            for (int r=0; r<togglers.length; r++) {
+                for (int c=0; c<togglers[r].length; c++) {
+                    if (e.getSource() == togglers[r][c] && (!clicked[r][c] && togglers[r][c].getIcon() == empty)) {
+                        smiley.setIcon(smileyClick);
+                    }
+                }
+            }
+        }
     }
 
     public void mouseEntered(MouseEvent e) {
@@ -181,10 +223,10 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
                 for (JToggleButton[] tRow : togglers) {
                     for (JToggleButton button : tRow) {
                         if (e.getSource() == button) {
-                            if (!button.isSelected()) {
+                            if (button.getIcon() == empty) {
                                 button.setIcon(flag);
-                            } else {
-                                button.setIcon(empty);
+                            } else if(button.getIcon()==flag){
+                                    button.setIcon(empty);
                             }
                         }
                     }
@@ -196,15 +238,20 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
                         if (e.getSource() == togglers[r][c] && (!clicked[r][c] && togglers[r][c].getIcon() == empty)) {
                             if(grid[r][c] == 0){
                                 clickExpand(r, c);
+                                smiley.setIcon(smileyReg);
                             }else if(grid[r][c]>0){
                                 clickSpace(r,c);
                             }else{
                                 exposeMines();
                             }
-
                         }
+                        if(isGameWon())
+                            flagMines();
                     }
                 }
+            }
+            if(e.getSource() == smiley){
+                createMap();
             }
         }
         frame.revalidate();
@@ -213,21 +260,21 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
     public void actionPerformed(ActionEvent e) {
         if(e.getSource() == difficulties[0]){
             difficulty = 0;
-            frame.setSize(1000,800);
+            frame.setSize(1000,860);
             dimensionRow = 9;
             dimensionCol = 9;
             createMap();
         }
         if(e.getSource() == difficulties[1]){
             difficulty = 1;
-            frame.setSize(1000,800);
+            frame.setSize(1000,860);
             dimensionRow = 16;
             dimensionCol = 16;
             createMap();
         }
         if(e.getSource() == difficulties[2]){
             difficulty = 2;
-            frame.setSize(1875,800);
+            frame.setSize(1875,860);
             dimensionRow = 16;
             dimensionCol = 30;
             createMap();
@@ -244,6 +291,11 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
         panel=new JPanel();
         resizeImages();
         panel.setLayout(new GridLayout(dimensionRow, dimensionCol));
+        mineCount = new JLabel(String.format("%03d",mineCounts[difficulty]));
+        timer.cancel();
+        timer = new Timer();
+        timePassed = 0;
+        timerLabel.setText(String.format("%03d",timePassed));
         for (int r = 0; r < togglers.length; r++) {
             for (int c = 0; c < togglers[r].length; c++) {
                 togglers[r][c] = new JToggleButton();
@@ -258,6 +310,10 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
     }
 
     public void resizeImages(){
+        int SMILE_DIM = 40;
+
+        smiley = new JButton();
+        smiley.setPreferredSize(new Dimension(SMILE_DIM,SMILE_DIM));
         empty = new ImageIcon("empty.png");
         empty = new ImageIcon(empty.getImage().getScaledInstance(frame.getWidth() / dimensionCol,
                 frame.getHeight() / dimensionRow, Image.SCALE_SMOOTH));
@@ -267,6 +323,15 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
         flag = new ImageIcon("flag.png");
         flag = new ImageIcon(flag.getImage().getScaledInstance(frame.getWidth() / dimensionCol,
                 frame.getHeight() / dimensionRow, Image.SCALE_SMOOTH));
+        smileyReg = new ImageIcon("smiley-reg.jpg");
+        smileyReg = new ImageIcon(smileyReg.getImage().getScaledInstance(SMILE_DIM, SMILE_DIM, Image.SCALE_SMOOTH));
+        smileyWin = new ImageIcon("smiley-win.jpg");
+        smileyWin = new ImageIcon(smileyWin.getImage().getScaledInstance(SMILE_DIM, SMILE_DIM, Image.SCALE_SMOOTH));
+        smileyLose = new ImageIcon("smiley-lose.jpg");
+        smileyLose = new ImageIcon(smileyLose.getImage().getScaledInstance(SMILE_DIM, SMILE_DIM, Image.SCALE_SMOOTH));
+        smileyClick = new ImageIcon("smiley-click.jpg");
+        smileyClick = new ImageIcon(smileyClick.getImage().getScaledInstance(SMILE_DIM, SMILE_DIM, Image.SCALE_SMOOTH));
+        smiley.setIcon(smileyReg);
         numIcons = new ImageIcon[9];
         for(int i=0; i<9; i++){
             numIcons[i] = new ImageIcon(i+".png");
@@ -275,7 +340,7 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
         }
     }
 
-    //General Utilities
+    //General Utilities///////////
     public int randBetween(int a, int b){
         return (int)(Math.random()*(b-a)) + a;
     }
@@ -287,8 +352,20 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
             System.out.println();
         }     
     }
+    /////////////////////////////
 
     public static void main(String[] args) {
         Minesweeper mS = new Minesweeper();
+    }
+
+    class UpdateTimer extends TimerTask{
+        public void run(){
+            if(!gameOver){
+                timePassed++;
+                timerLabel.setText(String.format("%03d",timePassed));
+            }
+            if(timePassed >= 999)
+                timePassed = 999;
+        }
     }
 }
