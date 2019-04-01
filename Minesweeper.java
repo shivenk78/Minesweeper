@@ -9,7 +9,7 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
     private JMenuBar menuBar;
     private JMenu menu;
     private JMenuItem[] difficulties;
-    private JPanel panel, smilePanel;
+    private JPanel panel, smilePanel, topPanel;
     private JToggleButton[][] togglers;
     private JLabel timer, mineCount;
     private JButton smiley;
@@ -26,7 +26,7 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
 
     private int[] mineCounts = {10, 40, 99};
 
-    //TODO: allow clicking of flags, prevent reverting with right click, win conditions, timer, counter 
+    //TODO: win conditions, timer, counter, icons, ensure start at 0
 
     public Minesweeper() {
         frame = new JFrame("Minesweeper");
@@ -48,17 +48,17 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
             item.addActionListener(this);
             menu.add(item);
         }
-
         menuBar.add(menu);
-        frame.add(menuBar, BorderLayout.NORTH);
+
 
         togglers = new JToggleButton[dimensionRow][dimensionCol];
         grid = new int[dimensionRow][dimensionCol];
         clicked = new boolean[dimensionRow][dimensionCol];
         panel = new JPanel();
+        topPanel = new JPanel();
 
         smilePanel = new JPanel();
-        smilePanel.setLayout(new GridLayout(1, 3));
+        smilePanel.setLayout(new FlowLayout());
         timer = new JLabel("000");
         smiley = new JButton();
         mineCount = new JLabel(String.format("%03d",mineCounts[difficulty]));
@@ -69,7 +69,10 @@ public class Minesweeper extends JPanel implements ActionListener, MouseListener
         
 
         createMap();
-        frame.add(smilePanel, BorderLayout.CENTER);
+        frame.add(topPanel, BorderLayout.NORTH);
+        topPanel.setLayout(new BorderLayout());
+        topPanel.add(menuBar, BorderLayout.NORTH);
+        topPanel.add(smilePanel, BorderLayout.CENTER);
         frame.add(panel, BorderLayout.CENTER);
 
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
